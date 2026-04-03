@@ -1,13 +1,17 @@
 """
-Decision Window Engine — Pass Viability v0.1
+Decision Window Engine — Execution Timing v0.2
 
-Anchor 3: Determines whether a pass is still viable at execution time.
-Gameplay problem: late or intercepted passes (timing failure).
+Anchor 3: Determines whether an action is still viable at execution time.
+Gameplay problem: actions that look open at input time die during execution.
 
-v0.1: adds animation delay — the wind-up window between input and release
-      where defenders can close on the lane before the ball moves.
+Evaluates two action types:
+  - Pass viability (v0.1): ball flight vs defender interception
+  - Drive viability (v0.2): drive to rim vs help defender arrival
 
-Pure function. No engine, no UI, no simulation loop.
+Both share the same timing model: animation delay creates a gap between
+input and execution where defenders can close.
+
+Pure functions. No engine, no UI, no simulation loop.
 """
 
 from __future__ import annotations
@@ -209,5 +213,120 @@ def evaluate_pass_viability(
         animation_delay_s=round(animation_delay_s, 4),
         effective_execution_time=round(effective_execution_time, 4),
         earliest_intercept=round(earliest_intercept, 4) if earliest_intercept != float("inf") else float("inf"),
+        margin_ms=round(margin_ms, 2) if margin_ms != float("inf") else float("inf"),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Drive viability
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class DriveViabilityResult:
+    viable: bool
+    time_to_target: float           # seconds for driver to reach target
+    animation_delay_s: float        # seconds of gather/first-step delay
+    effective_execution_time: float  # animation_delay + time_to_target
+    earliest_help_arrival: float    # seconds for fastest help defender to reach drive path
+    margin_ms: float                # (earliest_help_arrival - time_to_target) in ms
+
+
+def evaluate_drive_viability(
+    driver_pos: Vec2,
+    driver_vel: Vec2,
+    target_pos: Vec2,
+    defenders: list[tuple[Vec2, Vec2]],
+    driver_speed: float,
+    animation_delay_s: float = 0.0,
+    margin_threshold_ms: float = 100.0,
+) -> DriveViabilityResult:
+    """
+    Evaluate whether a drive to the rim is viable given help defenders.
+
+    The driver moves from driver_pos toward target_pos at driver_speed.
+    During the animation delay (gather step, first-step animation), the
+    driver is stationary but help defenders are already rotating.
+
+    Args:
+        driver_pos: current position of the ball handler
+        driver_vel: current velocity of the driver (used for momentum direction)
+        target_pos: destination (typically near the rim)
+        defenders: list of (position, velocity) for each help defender
+        driver_speed: drive speed in units/sec
+        animation_delay_s: gather/first-step delay before movement starts
+        margin_threshold_ms: minimum margin in ms for drive to be viable
+
+    Returns:
+        DriveViabilityResult with viability decision and timing breakdown.
+    """
+    drive_dist = (target_pos - driver_pos).length()
+    if driver_speed <= 0:
+        raise ValueError("driver_speed must be positive")
+
+    time_to_target = drive_dist / driver_speed
+
+    # Drive path: driver moves from driver_pos to target_pos
+    drive_vec = target_pos - driver_pos
+    if drive_dist == 0:
+        return DriveViabilityResult(
+            viable=True,
+            time_to_target=0.0,
+            animation_delay_s=round(animation_delay_s, 4),
+            effective_execution_time=round(animation_delay_s, 4),
+            earliest_help_arrival=float("inf"),
+            margin_ms=float("inf"),
+        )
+
+    drive_dir = Vec2(drive_vec.x / drive_dist, drive_vec.y / drive_dist)
+
+    # For each help defender, find if they can reach any point on the drive
+    # path before the driver arrives at that point.
+    earliest_help = float("inf")
+
+    steps = 100
+    for def_pos, def_vel in defenders:
+        defender_speed = def_vel.length()
+        if defender_speed <= 0:
+            # Stationary defender — check if they're already on the path
+            for i in range(steps + 1):
+                frac = i / steps
+                t_driver = frac * time_to_target
+                point_on_path = driver_pos + drive_dir * (driver_speed * t_driver)
+                d = (point_on_path - def_pos).length()
+                if d < 1.0:  # within 1 foot = in the lane
+                    earliest_help = min(earliest_help, t_driver)
+                    break
+            continue
+
+        for i in range(steps + 1):
+            frac = i / steps
+            t_driver = frac * time_to_target  # time driver reaches this point
+
+            # Position on drive path
+            point_on_path = driver_pos + drive_dir * (driver_speed * t_driver)
+
+            # Distance from defender to this point
+            d = (point_on_path - def_pos).length()
+
+            # Time for defender to reach this point
+            t_defender = d / defender_speed
+
+            # Defender has animation_delay + t_driver seconds total
+            # (defender starts moving at input time, driver starts after delay)
+            if t_defender <= animation_delay_s + t_driver:
+                earliest_help = min(earliest_help, t_driver)
+                break
+
+    margin_s = earliest_help - time_to_target
+    margin_ms = margin_s * 1000.0
+    viable = margin_ms > margin_threshold_ms
+
+    return DriveViabilityResult(
+        viable=viable,
+        time_to_target=round(time_to_target, 4),
+        animation_delay_s=round(animation_delay_s, 4),
+        effective_execution_time=round(animation_delay_s + time_to_target, 4),
+        earliest_help_arrival=round(earliest_help, 4) if earliest_help != float("inf") else float("inf"),
         margin_ms=round(margin_ms, 2) if margin_ms != float("inf") else float("inf"),
     )
