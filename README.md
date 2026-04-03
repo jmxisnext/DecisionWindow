@@ -4,6 +4,8 @@
 
 Sports game passing logic often evaluates openness at input time instead of whether the pass will still be valid when released and received. This system models the gap between when a player presses "pass" and when the ball actually arrives, accounting for animation delay, receiver motion, and defender interception.
 
+**Anchor boundary:** This module is responsible ONLY for execution timing (will an action survive through execution delay). It does NOT perform state extraction or constraint modeling — those belong to ISO4D and VoidLine respectively.
+
 ## The Core Problem
 
 In gameplay AI, a pass can look open when the player commits to it but become invalid by the time the ball is released. This happens because:
