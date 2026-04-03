@@ -108,3 +108,16 @@ def test_drive_and_pass_different_outcomes():
     # Drive works, pass doesn't — different timing windows, same state
     assert drive.viable is True
     assert pass_result.viable is False
+
+
+if __name__ == "__main__":
+    tests = [
+        ("Open drive", test_open_drive),
+        ("Help defender cuts off drive", test_help_defender_cuts_off_drive),
+        ("Drive killed by gather delay", test_drive_killed_by_gather_delay),
+        ("Drive and pass different outcomes", test_drive_and_pass_different_outcomes),
+    ]
+    for name, fn in tests:
+        fn()
+        print(f"  [PASS] {name}")
+    print(f"\nAll {len(tests)} drive viability tests passed.")

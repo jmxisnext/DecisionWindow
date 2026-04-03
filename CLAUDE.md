@@ -8,7 +8,7 @@ Determines whether an action (pass, drive) remains viable through the full execu
 
 ## Current Milestone
 
-v0.1 pass viability + v0.2 drive viability complete. See `docs/checkpoints/CHECKPOINT_v0_1_decision_window.md`.
+v0.2 pass + drive viability complete. See `docs/checkpoints/CHECKPOINT_v0_2_decision_window.md`.
 
 ## Session Start
 

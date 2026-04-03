@@ -1,39 +1,52 @@
 # Decision Window Engine
 
-**A deterministic pass-viability evaluator that predicts whether a pass remains valid through execution — not just at input time.**
+**A deterministic execution-timing evaluator that predicts whether an action (pass or drive) remains valid through execution — not just at input time.**
 
-Sports game passing logic often evaluates openness at input time instead of whether the pass will still be valid when released and received. This system models the gap between when a player presses "pass" and when the ball actually arrives, accounting for animation delay, receiver motion, and defender interception.
+Sports game AI often evaluates openness at input time instead of whether the action will still be valid when it completes. This system models the gap between when a player commits to an action and when it finishes executing, accounting for animation delay, motion prediction, and defender interception.
 
 **Anchor boundary:** This module is responsible ONLY for execution timing (will an action survive through execution delay). It does NOT perform state extraction or constraint modeling — those belong to ISO4D and VoidLine respectively.
 
 ## The Core Problem
 
-In gameplay AI, a pass can look open when the player commits to it but become invalid by the time the ball is released. This happens because:
+In gameplay AI, an action can look viable when the player commits to it but become invalid by the time it executes. This happens because:
 
-1. **Animation delay** — the passer has a wind-up before the ball leaves their hands
-2. **Defender closure** — defenders are already moving toward the passing lane during that wind-up
+1. **Animation delay** — the passer has a wind-up before the ball leaves their hands; the driver has a gather step before moving
+2. **Defender closure** — defenders are already moving during that animation window
 3. **The game evaluates at the wrong time** — checking openness at input rather than at execution
 
-The result: the player sees an open receiver, presses pass, and watches the ball get intercepted. The system told them "open" but the pass was dead before it started.
+The result: the player sees an open lane or receiver, commits, and watches the action fail. The system told them "open" but the window was dead before execution started.
 
-This system evaluates execution timing. It complements [VoidLine](../VoidLine), which defines the feasible action space — what actions are possible under constraint. Decision Window answers the next question: will a feasible action still be valid by the time it executes?
+This system evaluates execution timing. It complements VoidLine, which defines the feasible action space — what actions are possible under constraint. Decision Window answers the next question: will a feasible action still be valid by the time it executes?
 
 ## How It Works
 
-```
-margin = earliest_intercept - time_to_target
+Both evaluators share the same timing model:
 
-time_to_target   = distance(passer, receiver_future) / ball_speed
-receiver_future  = receiver_pos + receiver_vel * (animation_delay + time_to_target)
-earliest_intercept = min time a defender can reach any point on the ball's flight path
+```
+margin = earliest_defender_arrival - time_to_target
 
 if margin > threshold:
-    pass is viable
+    action is viable
 else:
-    pass is dead
+    action is dead
 ```
 
-The key insight: defenders get `animation_delay + t_ball` seconds to reach each point on the pass trajectory, because they start moving when the player commits (input time), not when the ball is released.
+### Pass viability
+
+```
+time_to_target     = distance(passer, receiver_future) / ball_speed
+receiver_future    = receiver_pos + receiver_vel * (animation_delay + time_to_target)
+earliest_intercept = min time a defender can reach any point on the ball's flight path
+```
+
+### Drive viability
+
+```
+time_to_target       = distance(driver, rim) / driver_speed
+earliest_help        = min time a help defender can reach any point on the drive path
+```
+
+The key insight: defenders get `animation_delay + t_action` seconds to reach each point on the action path, because they start moving when the player commits (input time), not when the action begins executing.
 
 ## The Wind-up Flip
 
@@ -49,6 +62,19 @@ The strongest demonstration is a single scenario run twice — same geometry, sa
 With zero delay, the defender at (10, 3) cannot reach the pass lane before the ball passes. With 0.3s of wind-up, that same defender now has enough time to close 3 units and intercept at 0.35s into ball flight.
 
 This is the exact player complaint: *"it looked open when I pressed pass."*
+
+## The Gather-Delay Flip (Drive)
+
+The same principle applies to drives. A gather step (first-step animation) gives help defenders time to rotate into the lane:
+
+| Gather Delay | Viable | Result |
+|---|---|---|
+| 0.0s | **OPEN** | Driver beats help defender to the rim |
+| 0.2s | **DEAD** | Help defender rotates into the lane during gather |
+
+Same geometry, same help defender. The gather animation is all it takes.
+
+A fourth test proves both evaluators can reach different conclusions from the same game state: the drive to the rim is viable but a pass to the corner is not. This is why both evaluation functions exist — different action types have different timing windows.
 
 ## Full Scenario Suite
 
@@ -71,14 +97,16 @@ The borderline case (-30ms margin) demonstrates the evaluator produces non-trivi
 |---|---|
 | Lead-pass prediction | Receiver future position is iteratively corrected for motion during flight |
 | Multi-defender evaluation | Takes the earliest intercept across all defenders |
-| Animation delay | Wind-up time where defenders move but ball doesn't |
-| Conservative intercept model | Defenders use max speed toward any point on the pass line |
+| Animation delay (pass) | Wind-up time where defenders move but ball doesn't |
+| Gather delay (drive) | First-step animation where help defenders rotate but driver is stationary |
+| Conservative intercept model | Defenders use max speed toward any point on the action path |
+| Cross-action comparison | Same game state can produce different viability for pass vs drive |
 
 ## Engine Integration Context
 
 - Consumes current game-state positions and velocities (no special data format required)
-- Runs during gameplay decision evaluation, before committing to a pass action
-- Outputs a pass viability score and timing margin that a decision-maker can act on
+- Runs during gameplay decision evaluation, before committing to an action
+- Outputs a viability score and timing margin that a decision-maker can act on
 
 ## What This Does Not Model (Yet)
 
@@ -88,6 +116,8 @@ The borderline case (-30ms margin) demonstrates the evaluator produces non-trivi
 - 5v5 team context
 
 ## Usage
+
+### Pass viability
 
 ```python
 from decision_window import Vec2, evaluate_pass_viability
@@ -106,19 +136,40 @@ print(result.margin_ms)               # margin in milliseconds
 print(result.effective_execution_time) # delay + flight time
 ```
 
+### Drive viability
+
+```python
+from decision_window import Vec2, evaluate_drive_viability
+
+result = evaluate_drive_viability(
+    driver_pos=Vec2(-16, 4),
+    driver_vel=Vec2(5, 0),
+    target_pos=Vec2(0, 0),            # rim
+    defenders=[(Vec2(-5, 7), Vec2(0, -6))],
+    driver_speed=15.0,
+    animation_delay_s=0.2,
+)
+
+print(result.viable)                  # False
+print(result.margin_ms)               # margin in milliseconds
+print(result.earliest_help_arrival)   # when help defender arrives
+```
+
 ## Files
 
 | File | Purpose |
 |---|---|
-| `decision_window.py` | Core evaluator — pure function, no dependencies |
-| `test_pass_viability.py` | 5 test scenarios including the wind-up flip |
+| `decision_window.py` | Core evaluator — pass + drive viability, pure functions, no dependencies |
+| `test_pass_viability.py` | 5 pass viability tests including the wind-up flip |
+| `test_drive_viability.py` | 4 drive viability tests including gather-delay flip and cross-action comparison |
 | `demo_runner.py` | Prints all scenarios in table format |
 | `visualize_windup_case.py` | Generates the two-panel wind-up comparison figure |
 
 ## Run
 
 ```bash
-python test_pass_viability.py        # run tests
+python test_pass_viability.py        # 5 pass viability tests
+python test_drive_viability.py       # 4 drive viability tests
 python demo_runner.py                # print demo table
 python visualize_windup_case.py      # generate windup_flip.png
 ```

@@ -7,28 +7,29 @@ This project is the core deliverable of **Anchor 3 (Decision Window Engine)** in
 | Anchor | Focus | Status |
 |---|---|---|
 | 1 — ISO4D | Extraction: raw input to structured spatial state | In progress |
-| 2 — Voidline | Feasibility: possible vs impossible under constraints | Defined |
-| **3 — Decision Window** | **Timing: is the action still viable at execution?** | **v0.1 complete** |
+| 2 — Voidline | Feasibility: possible vs impossible under constraints | v0.3 complete |
+| **3 — Decision Window** | **Timing: is the action still viable at execution?** | **v0.2 complete** |
 
 The three anchors form a pipeline: ISO4D provides state, Voidline defines the possibility space, Decision Window evaluates whether an action can still succeed when executed.
 
 ## Target Problem
 
-Sports game AI evaluates pass openness at input time — when the player presses the button. But the pass doesn't execute instantly. There is a wind-up animation, and during that window, defenders are already closing on the passing lane. By the time the ball is released, the "open" pass may already be dead.
+Sports game AI evaluates action openness at input time — when the player presses the button. But the action doesn't execute instantly. A pass has a wind-up animation; a drive has a gather step. During that window, defenders are already closing. By the time the action completes, the "open" window may already be dead.
 
-This is one of the most common player complaints in basketball and soccer games: *"it looked open when I pressed pass."*
+This is one of the most common player complaints in basketball and soccer games: *"it looked open when I pressed pass"* and *"the lane was open but help got there first."*
 
-The Decision Window Engine models this gap and returns a timing margin that tells you whether the pass will survive through execution.
+The Decision Window Engine models this gap for both passes and drives, returning a timing margin that tells you whether the action will survive through execution.
 
 ## Resume Bullets
 
-- Built a deterministic pass-viability evaluator that predicts whether a pass remains valid through execution, including receiver motion, multi-defender interception, and animation delay
-- Demonstrated that a 0.3s animation wind-up can flip a viable pass to intercepted using identical game-state geometry — modeling the exact timing failure that causes bad passes in sports games
-- Designed the system as a pure function consuming positions and velocities, with no engine dependency, suitable for integration into any gameplay decision pipeline
+- Built a deterministic execution-timing evaluator for sports gameplay AI that predicts whether passes and drives remain valid through the full animation window — from input to completion
+- Demonstrated that 0.3s of pass wind-up or 0.2s of drive gather delay can flip a viable action to dead using identical geometry — modeling the exact timing failures that cause intercepted passes and blocked drives in sports games
+- Proved that the same game state can produce different viability for different action types (drive viable, pass dead), validating a multi-action evaluation model
+- Designed as pure functions consuming positions and velocities, with no engine dependency, suitable for integration into any gameplay decision pipeline
 
 ## Project Summary (Short)
 
-> Deterministic pass-viability evaluator for sports gameplay AI. Models the timing gap between player input and ball release — proving that animation delay alone can kill an otherwise open pass. Pure function, test-backed, with a two-panel visualization showing the same pass flip from viable to intercepted when 0.3s of wind-up is added.
+> Deterministic execution-timing evaluator for sports gameplay AI. Models the gap between player input and action completion for both passes and drives — proving that animation delay alone can kill an otherwise open action. Pure functions, 9 tests, with visualization showing the same pass flip from viable to intercepted when 0.3s of wind-up is added.
 
 ## Why This Matters to Sports Gameplay AI
 
