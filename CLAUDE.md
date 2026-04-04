@@ -8,7 +8,7 @@ Determines whether an action (pass, drive) remains viable through the full execu
 
 ## Current Milestone
 
-v0.2 pass + drive viability complete. See `docs/checkpoints/CHECKPOINT_v0_2_decision_window.md`.
+v0.2.1 pass + drive viability with cross-anchor integration. See `docs/checkpoints/CHECKPOINT_v0_2_decision_window.md`.
 
 ## Session Start
 
@@ -43,6 +43,7 @@ python visualize_windup_case.py        # regenerate windup_flip.png
 | `demo_runner.py` | Terminal demo |
 | `visualize_windup_case.py` | Hero figure generator |
 | `docs/checkpoints/` | Milestone checkpoints |
+| `integration_voidline.py` | Cross-anchor demo (ISO4D -> VoidLine -> Decision Window) |
 
 ## Anchor Boundary
 

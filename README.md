@@ -164,6 +164,7 @@ print(result.earliest_help_arrival)   # when help defender arrives
 | `test_drive_viability.py` | 4 drive viability tests including gather-delay flip and cross-action comparison |
 | `demo_runner.py` | Prints all scenarios in table format |
 | `visualize_windup_case.py` | Generates the two-panel wind-up comparison figure |
+| `integration_voidline.py` | Cross-anchor demo (ISO4D -> VoidLine -> Decision Window) |
 
 ## Run
 
@@ -171,5 +172,6 @@ print(result.earliest_help_arrival)   # when help defender arrives
 python test_pass_viability.py        # 5 pass viability tests
 python test_drive_viability.py       # 4 drive viability tests
 python demo_runner.py                # print demo table
+python integration_voidline.py       # cross-anchor integration demo
 python visualize_windup_case.py      # generate windup_flip.png
 ```
