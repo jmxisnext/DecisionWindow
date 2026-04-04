@@ -4,6 +4,53 @@
 
 Sports game AI often evaluates openness at input time instead of whether the action will still be valid when it completes. This system models the gap between when a player commits to an action and when it finishes executing, accounting for animation delay, motion prediction, and defender interception.
 
+## Quick Start
+
+```bash
+git clone <repo-url>
+cd decision_window
+pip install -r requirements.txt   # optional — core has zero dependencies
+python demo_runner.py
+```
+
+Expected output:
+
+```
+Decision Window Engine v0.2 — Pass Viability
+---------------------------------------------------------------------------------
+Scenario                  Viable  T_target   Anim  Eff_time  Intercept     Margin
+---------------------------------------------------------------------------------
+Clean pass                  OPEN      0.8s   0.0s      0.8s        ---        ---
+Obvious interception        DEAD      1.0s   0.0s      1.0s      0.44s   -560.0ms
+Borderline timing           DEAD      1.0s   0.0s      1.0s      0.97s    -30.0ms
+Multiple defenders          DEAD     0.83s   0.0s     0.83s    0.3569s  -473.07ms
+Wind-up: 0.0s delay         OPEN      0.8s   0.0s      0.8s        ---        ---
+Wind-up: 0.3s delay         DEAD      0.8s   0.3s      1.1s     0.352s   -448.0ms
+---------------------------------------------------------------------------------
+
+Key result: the wind-up pair uses identical geometry.
+The only difference is 0.3s of animation delay.
+That single variable flips the pass from OPEN to DEAD.
+
+Decision Window Engine v0.2 — Drive Viability
+---------------------------------------------------------------------------------
+Scenario                  Viable  T_target   Anim  Eff_time   Help_arr     Margin
+---------------------------------------------------------------------------------
+Open drive                  OPEN   1.0995s   0.0s   1.0995s        ---        ---
+Help cuts off drive         DEAD   1.0995s   0.0s   1.0995s    0.6817s  -417.81ms
+Gather: 0.0s delay          OPEN   1.0995s   0.0s   1.0995s        ---        ---
+Gather: 0.2s delay          DEAD   1.0995s   0.2s   1.2995s    0.7696s  -329.85ms
+---------------------------------------------------------------------------------
+
+Key result: the gather-delay pair uses identical geometry.
+The only difference is 0.2s of gather delay.
+That single variable flips the drive from OPEN to DEAD.
+```
+
+The wind-up pair is the hero result: identical geometry, one variable changed, outcome flipped. That's the core claim of the system.
+
+---
+
 **Anchor boundary:** This module is responsible ONLY for execution timing (will an action survive through execution delay). It does NOT perform state extraction or constraint modeling — those belong to ISO4D and VoidLine respectively.
 
 ## The Core Problem
@@ -75,21 +122,6 @@ The same principle applies to drives. A gather step (first-step animation) gives
 Same geometry, same help defender. The gather animation is all it takes.
 
 A fourth test proves both evaluators can reach different conclusions from the same game state: the drive to the rim is viable but a pass to the corner is not. This is why both evaluation functions exist — different action types have different timing windows.
-
-## Full Scenario Suite
-
-```
-Scenario                  Viable  T_target   Anim  Eff_time  Intercept     Margin
----------------------------------------------------------------------------------
-Clean pass                  OPEN      0.8s   0.0s      0.8s        ---        ---
-Obvious interception        DEAD      1.0s   0.0s      1.0s      0.44s   -560.0ms
-Borderline timing           DEAD      1.0s   0.0s      1.0s      0.97s    -30.0ms
-Multiple defenders          DEAD     0.83s   0.0s     0.83s    0.3569s  -473.07ms
-Wind-up: 0.0s delay         OPEN      0.8s   0.0s      0.8s        ---        ---
-Wind-up: 0.3s delay         DEAD      0.8s   0.3s      1.1s     0.352s   -448.0ms
-```
-
-The borderline case (-30ms margin) demonstrates the evaluator produces non-trivial results, not just binary open/closed.
 
 ## What This Models
 
@@ -165,6 +197,35 @@ print(result.earliest_help_arrival)   # when help defender arrives
 | `demo_runner.py` | Prints all scenarios in table format |
 | `visualize_windup_case.py` | Generates the two-panel wind-up comparison figure |
 | `integration_voidline.py` | Cross-anchor demo (ISO4D -> VoidLine -> Decision Window) |
+
+## Cross-Anchor Integration
+
+Decision Window is the timing layer of a three-part gameplay AI decision stack:
+
+```
+ISO4D                     VoidLine                    Decision Window
+video -> positions ->     schemes -> pressure ->      delays -> viability
+(what is happening)       (what is allowed)           (what will still work)
+```
+
+**Defensive scheme determines baseline viability; animation delay determines when it dies.**
+
+The full pipeline runs on a single extracted game state — ISO4D positions feed VoidLine scheme-driven defense, which feeds Decision Window timing evaluation:
+
+```
+Pass viability: PG -> SG at t=1.5s
+
+              0ms      100ms     200ms     300ms
+drop          OPEN     OPEN      DEAD      DEAD
+ice           DEAD     DEAD      DEAD      DEAD
+help_heavy    OPEN     DEAD      DEAD      DEAD
+```
+
+Ice kills the pass at any speed (deny-middle positioning). Drop allows it up to 200ms of animation delay. Help-heavy's tight gap help means even 100ms is fatal.
+
+```bash
+python integration_voidline.py       # full cross-anchor pipeline
+```
 
 ## Run
 

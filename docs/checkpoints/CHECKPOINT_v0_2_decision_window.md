@@ -127,9 +127,26 @@ python integration_voidline.py       # cross-anchor integration demo
 python visualize_windup_case.py      # regenerate windup_flip.png
 ```
 
+## v0.2.2 — Portfolio Packaging (2026-04-04)
+
+### What was added
+
+- **Quick Start + expected output** in README (clone, install, run, see results in 10 seconds)
+- **Cross-anchor integration block** in all three repo READMEs: consistent diagram, scheme x delay table, one-sentence claim
+- **`requirements.txt`** for Decision Window and VoidLine
+- **`gameplay-ai-stack/` integration repo** — canonical front door with `run_pipeline.py` that orchestrates all three anchors via relative sibling paths
+
+### Packaging state
+
+All four entry points verified:
+- `ISO4D/demo_runner.py` — extraction table
+- `VoidLine/demo_runner.py` — constraint + counterfactual table
+- `decision_window/demo_runner.py` — pass + drive viability table
+- `gameplay-ai-stack/run_pipeline.py` — full cross-anchor pipeline
+
 ## Next Steps (When Resuming)
 
-1. Portfolio packaging: one diagram, one comparison table, one sentence
-2. README updates across all three repos to reflect the full pipeline
+1. Commit packaging changes across all four repos
+2. Create GitHub remotes for `gameplay-ai-stack` and push all repos
 3. Optionally: defender reaction delay (next physics addition)
 4. Optionally: temporal sweep (vary animation_delay from 0 to 0.5s, plot margin curve)
