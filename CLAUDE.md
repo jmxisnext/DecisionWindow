@@ -13,7 +13,7 @@ v0.2.1 pass + drive viability with cross-anchor integration. See `docs/checkpoin
 ## Session Start
 
 1. Read this file
-2. Read `docs/checkpoints/CHECKPOINT_v0_1_decision_window.md`
+2. Read `docs/checkpoints/CHECKPOINT_v0_2_decision_window.md`
 3. Run `git status` and `git log --oneline -3`
 4. Summarize: current milestone, dirty state, next 3 actions
 
