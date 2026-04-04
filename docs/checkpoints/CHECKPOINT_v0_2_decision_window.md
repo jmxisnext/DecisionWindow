@@ -81,6 +81,41 @@ Same geometry, same help defender. Adding 0.2s gather delay flips a viable drive
 - Temporal simulation loop
 - Engine integration layer
 
+## v0.2.1 — Cross-Anchor Integration (2026-04-03)
+
+**Full pipeline demonstrated: ISO4D extraction -> VoidLine scheme defense -> Decision Window viability evaluation.**
+
+### What was added
+
+- **Cross-anchor integration** (`integration_voidline.py`): loads ISO4D extraction, generates scheme defenders via VoidLine, evaluates pass and drive viability under each scheme with delay sweep (0-300ms).
+
+### What was proven
+
+Pass viability (PG -> SG at t=1.5s):
+
+| Scheme | 0ms | 100ms | 200ms | 300ms |
+|---|---|---|---|---|
+| drop | OPEN | OPEN | DEAD | DEAD |
+| ice | DEAD | DEAD | DEAD | DEAD |
+| help_heavy | OPEN | DEAD | DEAD | DEAD |
+
+1. **Scheme determines baseline viability**: Ice kills the pass at any speed (deny-middle positioning puts D1 in the passing lane). Drop allows it. Help_heavy barely allows it.
+2. **Delay is the tipping point in permissive schemes**: Drop flips OPEN->DEAD at 200ms. Help_heavy flips at just 100ms.
+3. **Help_heavy is most timing-sensitive**: the aggressive gap help means even tiny delays are fatal.
+4. **Drive is structurally impossible at this court position**: 42ft to rim = 2.8s, help always arrives regardless of scheme or delay. This is correct — nobody drives from the 3-point line.
+5. **VoidLine pressure and Decision Window viability tell complementary stories**: VoidLine shows HOW MUCH space is removed, Decision Window shows WHETHER a specific action survives.
+
+### Architecture validated
+
+```
+ISO4D (offense extraction)
+    -> VoidLine scheme engine (defense generation)
+    -> VoidLine constraint field (pressure landscape)
+    -> Decision Window (specific action viability)
+```
+
+Two analysis layers on the same game state: macro (pressure field) and micro (action timing).
+
 ## Resume Commands
 
 ```bash
@@ -88,11 +123,13 @@ cd J:/projects/decision_window
 python test_pass_viability.py        # verify all 5 pass tests pass
 python test_drive_viability.py       # verify all 4 drive tests pass
 python demo_runner.py                # print scenario table
+python integration_voidline.py       # cross-anchor integration demo
 python visualize_windup_case.py      # regenerate windup_flip.png
 ```
 
 ## Next Steps (When Resuming)
 
-1. Portfolio alignment and positioning materials
-2. Optionally: defender reaction delay (next physics addition)
-3. Optionally: temporal sweep (vary animation_delay from 0 to 0.5s, plot margin curve)
+1. Portfolio packaging: one diagram, one comparison table, one sentence
+2. README updates across repos to reflect full pipeline
+3. Optionally: defender reaction delay (next physics addition)
+4. Optionally: temporal sweep (vary animation_delay from 0 to 0.5s, plot margin curve)
