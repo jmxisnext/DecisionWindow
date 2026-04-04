@@ -144,9 +144,24 @@ All four entry points verified:
 - `decision_window/demo_runner.py` — pass + drive viability table
 - `gameplay-ai-stack/run_pipeline.py` — full cross-anchor pipeline
 
+## v0.2.3 — Code Review Bug Fixes (2026-04-04)
+
+Full cross-repo code review identified and fixed:
+
+1. **Receiver motion convergence** (`decision_window.py`): fixed 2-iteration loop → converge to <1ms delta (max 20 iterations). Fast-moving receivers now produce accurate time_to_target.
+2. **Cone volume undercount** (`VoidLine/src/constraints/volume.py`): `half_angle / 180` → `2 * half_angle / 360`. Perceptual cone constraints were at 50% of correct value.
+3. **Single-frame crash guard** (`VoidLine/adapter/scheme.py`): added `n == 1` check before array access in `_positions_to_frames()`.
+4. **Defender construction bug** (`gameplay-ai-stack/stack_runner.py`): pass receiver (player_3) was included in defender list. Pass result flipped from DEAD (-9ms) to OPEN (correct).
+5. **ISO4D test count**: README updated 98 → 162.
+
+All 300 tests passing (162 ISO4D + 122 VoidLine + 9 Decision Window + 7 Stack).
+
+Margin values shifted slightly in demo output due to convergence fix (e.g., Multiple defenders: -473.07ms → -473.12ms). OPEN/DEAD patterns unchanged.
+
 ## Next Steps (When Resuming)
 
-1. Commit packaging changes across all four repos
-2. Create GitHub remotes for `gameplay-ai-stack` and push all repos
+1. Commit bug fixes across all four repos and push
+2. Replace hardcoded absolute paths (`J:/projects/...`) with relative sibling paths across all repos
 3. Optionally: defender reaction delay (next physics addition)
 4. Optionally: temporal sweep (vary animation_delay from 0 to 0.5s, plot margin curve)
+5. Optionally: add test for fast-moving receiver to prevent convergence regression

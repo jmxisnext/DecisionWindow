@@ -23,7 +23,7 @@ Scenario                  Viable  T_target   Anim  Eff_time  Intercept     Margi
 Clean pass                  OPEN      0.8s   0.0s      0.8s        ---        ---
 Obvious interception        DEAD      1.0s   0.0s      1.0s      0.44s   -560.0ms
 Borderline timing           DEAD      1.0s   0.0s      1.0s      0.97s    -30.0ms
-Multiple defenders          DEAD     0.83s   0.0s     0.83s    0.3569s  -473.07ms
+Multiple defenders          DEAD     0.83s   0.0s     0.83s    0.3569s  -473.12ms
 Wind-up: 0.0s delay         OPEN      0.8s   0.0s      0.8s        ---        ---
 Wind-up: 0.3s delay         DEAD      0.8s   0.3s      1.1s     0.352s   -448.0ms
 ---------------------------------------------------------------------------------

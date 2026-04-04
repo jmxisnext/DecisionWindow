@@ -171,21 +171,19 @@ def evaluate_pass_viability(
         raise ValueError("ball_speed must be positive")
     time_to_target = dist / ball_speed
 
-    # 2. Predict receiver's future position at arrival time
-    #    Receiver moves during BOTH animation delay and ball flight
-    total_receiver_time = animation_delay_s + time_to_target
-    receiver_future = receiver_pos + receiver_vel * total_receiver_time
-
-    # 3. The actual pass target is the receiver's predicted position
-    #    Recompute time_to_target with corrected target
-    corrected_dist = (receiver_future - passer_pos).length()
-    time_to_target = corrected_dist / ball_speed
-
-    # One more iteration for convergence
-    total_receiver_time = animation_delay_s + time_to_target
-    receiver_future = receiver_pos + receiver_vel * total_receiver_time
-    corrected_dist = (receiver_future - passer_pos).length()
-    time_to_target = corrected_dist / ball_speed
+    # 2. Predict receiver's future position at arrival time.
+    #    Receiver moves during BOTH animation delay and ball flight.
+    #    Iterate until time_to_target converges (receiver position depends on
+    #    flight time, which depends on receiver position).
+    for _ in range(20):
+        total_receiver_time = animation_delay_s + time_to_target
+        receiver_future = receiver_pos + receiver_vel * total_receiver_time
+        corrected_dist = (receiver_future - passer_pos).length()
+        new_ttt = corrected_dist / ball_speed
+        if abs(new_ttt - time_to_target) < 0.001:
+            time_to_target = new_ttt
+            break
+        time_to_target = new_ttt
 
     # 4. For each defender, compute earliest intercept time
     #    Defenders get animation_delay extra seconds (they move during wind-up)
