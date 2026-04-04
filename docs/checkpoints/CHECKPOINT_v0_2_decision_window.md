@@ -83,11 +83,11 @@ Same geometry, same help defender. Adding 0.2s gather delay flips a viable drive
 
 ## v0.2.1 — Cross-Anchor Integration (2026-04-03)
 
-**Full pipeline demonstrated: ISO4D extraction -> VoidLine scheme defense -> Decision Window viability evaluation.**
+**Full pipeline: extracted motion -> scheme defense -> action viability under timing pressure.**
 
 ### What was added
 
-- **Cross-anchor integration** (`integration_voidline.py`): loads ISO4D extraction, generates scheme defenders via VoidLine, evaluates pass and drive viability under each scheme with delay sweep (0-300ms).
+- **Cross-anchor integration** (`integration_voidline.py`): loads ISO4D extraction, generates scheme-driven defenders via the Scheme Engine, evaluates pass and drive viability under each scheme with delay sweep (0-300ms).
 
 ### What was proven
 
@@ -99,22 +99,22 @@ Pass viability (PG -> SG at t=1.5s):
 | ice | DEAD | DEAD | DEAD | DEAD |
 | help_heavy | OPEN | DEAD | DEAD | DEAD |
 
-1. **Scheme determines baseline viability**: Ice kills the pass at any speed (deny-middle positioning puts D1 in the passing lane). Drop allows it. Help_heavy barely allows it.
-2. **Delay is the tipping point in permissive schemes**: Drop flips OPEN->DEAD at 200ms. Help_heavy flips at just 100ms.
-3. **Help_heavy is most timing-sensitive**: the aggressive gap help means even tiny delays are fatal.
-4. **Drive is structurally impossible at this court position**: 42ft to rim = 2.8s, help always arrives regardless of scheme or delay. This is correct — nobody drives from the 3-point line.
-5. **VoidLine pressure and Decision Window viability tell complementary stories**: VoidLine shows HOW MUCH space is removed, Decision Window shows WHETHER a specific action survives.
+1. **Scheme determines baseline viability.** Ice kills the pass at any speed — deny-middle positioning places the on-ball defender directly in the passing lane. Drop and help_heavy allow it at zero delay.
+2. **Delay is the tipping point in permissive schemes.** Drop flips OPEN->DEAD at 200ms. Help_heavy flips at just 100ms.
+3. **More aggressive schemes are more timing-sensitive.** Help_heavy's tight gap help means even small delays are fatal — the narrowest viable window of any scheme.
+4. **Drive viability is limited by court geometry at this decision point.** 42ft to rim at 15 ft/s = 2.8s; help defenders arrive regardless of scheme or delay. A correct result: at this position, passing is the live action, not driving.
+5. **Two complementary analysis layers on the same state.** VoidLine measures how much space is removed (macro pressure). Decision Window measures whether a specific action survives execution (micro timing).
 
-### Architecture validated
+### Architecture
 
 ```
-ISO4D (offense extraction)
-    -> VoidLine scheme engine (defense generation)
-    -> VoidLine constraint field (pressure landscape)
-    -> Decision Window (specific action viability)
+ISO4D          ->  state (positions, velocities from video)
+Scheme Engine  ->  defense (generated from offensive state + scheme rules)
+VoidLine       ->  pressure field (how constrained is the agent?)
+Decision Window -> action viability (does this pass/drive survive execution?)
 ```
 
-Two analysis layers on the same game state: macro (pressure field) and micro (action timing).
+Four layers, one game state. Each layer answers a different question.
 
 ## Resume Commands
 
@@ -130,6 +130,6 @@ python visualize_windup_case.py      # regenerate windup_flip.png
 ## Next Steps (When Resuming)
 
 1. Portfolio packaging: one diagram, one comparison table, one sentence
-2. README updates across repos to reflect full pipeline
+2. README updates across all three repos to reflect the full pipeline
 3. Optionally: defender reaction delay (next physics addition)
 4. Optionally: temporal sweep (vary animation_delay from 0 to 0.5s, plot margin curve)
